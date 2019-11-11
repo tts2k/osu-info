@@ -5,6 +5,7 @@ var argv = yargs // yargs configuration
     .usage('Usage: $0 <command> [option]')
     .help('help')
     .alias('h', 'help')
+
     // User info command
     .command('info', 'Fetch user infomation', function (yargs) {
         argv = yargs
@@ -44,6 +45,7 @@ var argv = yargs // yargs configuration
             }
             else getUser(argv.n, 'string');
     })
+
     // Beatmap command
     .command('bm', 'Fetch beatmap information', function (yargs) {
         argv = yargs
@@ -58,7 +60,7 @@ var argv = yargs // yargs configuration
             .demandOption('i')
             .argv;
 
-            getBm(argv.i, 's');
+            getBm(argv.i);
     })
     .demandCommand(1)
     .argv;
@@ -106,7 +108,7 @@ async function getUser (user, type) {
     console.log("\n####################################");
 }
 
-async function getBm(id, type) {
+async function getBm(id) {
     const url = new URL("https://osu.ppy.sh/api/get_beatmaps");
 
     let params = {
