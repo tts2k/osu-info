@@ -1,6 +1,11 @@
 const fetch = require("node-fetch");
+const fs = require("fs");
+const request = require("request");
+const contentDisposition = require("content-disposition");
+const progressBar = require("cli-progress");
 const yargs = require('yargs');
 var config = require('./config.json');
+
 var argv = yargs // yargs configuration
     .usage('Usage: $0 <command> [option]')
     .help('help')
@@ -61,6 +66,23 @@ var argv = yargs // yargs configuration
             .argv;
 
             getBm(argv.i);
+    })
+
+    // Download beatmap from bloodcat
+    .command('bcat', 'Download beatmapset (by ID) from bloodcat', function (yargs) {
+        argv = yargs
+            .usage("Usage $0 bcat [option]")
+            .help('help')
+            .alias('h', 'help')
+            .option('id', {
+                alias: 'i',
+                describe: 'Provide beatmapset ID',
+                type: 'int'
+            })
+            .demandOption('i')
+            .argv;
+
+            dlBm(argv.i);
     })
     .demandCommand(1)
     .argv;
@@ -140,4 +162,42 @@ async function getBm(id) {
     console.log("- Length: " + parseInt(data[0].total_length) / 60 + 
                     "m" + parseInt(data[0].total_length) % 60);
     console.log("\n####################################");
+}
+
+function dlBm(id) {
+
+    let received = 0;
+
+    const bar = new progressBar.SingleBar({}, progressBar.Presets.shades_classic);
+
+    request("https://bloodcat.com/osu/s/" + id)
+    .on("response", (response) => {
+        if (response.statusCode != 200) {
+            throw new Error("Error " + response.statusCode);
+        }
+
+        const cd = contentDisposition.parse(response.headers["content-disposition"]);
+        var file = fs.createWriteStream(cd.parameters.filename);
+        
+        file.on("finish", () => {
+            bar.stop();
+            file.close();
+            console.log("File " + cd.parameters.filename + " downloaded.");
+        });
+
+        file.on("error", () => {
+            file.unlink();
+            throw new Error("Error writing file.");
+        });
+
+        response.pipe(file);
+
+        const totalSize = response.headers['content-length'];
+        bar.start(totalSize, 0);
+    })
+    .on("data", (chunk) => {
+        received += chunk.length;
+        bar.update(received);
+    })
+
 }
