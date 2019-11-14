@@ -79,10 +79,17 @@ var argv = yargs // yargs configuration
                 describe: 'Provide beatmapset ID',
                 type: 'int'
             })
-            .demandOption('i')
+            .option('query', {
+                alias: 'q',
+                describe: 'Search for beatmap (top 20 result)',
+                type: 'string'
+            })
+            .conflicts('id', 'query')
             .argv;
-
-            dlBm(argv.i);
+            if (argv.id)
+                dlBm(argv.i);
+            else
+                bmSearch(argv.s);
     })
     .demandCommand(1)
     .argv;
@@ -165,9 +172,7 @@ async function getBm(id) {
 }
 
 function dlBm(id) {
-
     let received = 0;
-
     const bar = new progressBar.SingleBar({}, progressBar.Presets.shades_classic);
 
     request("https://bloodcat.com/osu/s/" + id)
@@ -200,4 +205,32 @@ function dlBm(id) {
         bar.update(received);
     })
 
+}
+
+async function bmSearch(key) {
+    const url = new URL('http://bloodcat.com/osu/');
+
+    let params = {
+        "q" : key,
+        "mod": "json"
+    }
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+    let headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    let response = await fetch(url, {
+        method: "GET",
+        headers: headers,
+    })
+    let data = await response.json();
+    data = data.slice(0, 20);
+
+    var index = 1;
+    data.forEach((entry) => {
+        console.log(index + ') ' +entry.id + ' - ' + entry.artist + ' - ' + entry.title + ' (mapped by ' + entry.creator + ')');
+        index++;
+    });
 }
